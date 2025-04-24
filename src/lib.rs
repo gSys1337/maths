@@ -1,5 +1,6 @@
 pub mod real;
 pub mod integer;
+pub mod naturals;
 #[cfg(test)]
 mod tests;
 
