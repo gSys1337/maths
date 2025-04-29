@@ -54,8 +54,7 @@ impl PartialEq<Self> for Naturals {
             (Big(lhs), Big(rhs)) => {
                 lhs.iter().zip(rhs).all(|(l, r)| l == r) && lhs.len() == rhs.len()
             }
-            (Small(_lhs), Big(_rhs)) => unimplemented!(), // It's assumed that this case does not happen.
-            (Big(_lhs), Small(_rhs)) => unimplemented!(), // If Natural fits into usize then it's also stored accordingly.
+            _ => false,
         }
     }
 }
@@ -69,8 +68,8 @@ impl Ord for Naturals {
             (Big(_lhs), Big(_rhs)) => {
                 todo!()
             }
-            (Small(_lhs), Big(_rhs)) => unimplemented!(), // It's assumed that this case does not happen.
-            (Big(_lhs), Small(_rhs)) => unimplemented!(), // If Natural fits into usize then it's also stored accordingly.
+            (Small(_lhs), Big(_rhs)) => Ordering::Less,
+            (Big(_lhs), Small(_rhs)) => Ordering::Greater,
         }
     }
     fn max(self, _other: Self) -> Self

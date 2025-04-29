@@ -1,8 +1,9 @@
-pub mod real;
+pub mod convert;
+pub mod fmt;
 pub mod integer;
 pub mod naturals;
-pub mod fmt;
-pub mod convert;
+pub mod ops;
+pub mod real;
 #[cfg(test)]
 #[cfg(target_pointer_width = "64")]
 mod tests;
@@ -15,7 +16,6 @@ fn integer_from_u64() {
     assert_eq!(Integer::new(u64::MAX).parts, vec![usize::MAX, usize::MAX]);
     assert_eq!(Integer::new(42u64).parts, vec![42usize, 0usize]);
 }
-
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Copy, Clone)]
 pub enum Sign {

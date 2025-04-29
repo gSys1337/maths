@@ -1,4 +1,5 @@
-use crate::naturals::{Naturals, Naturals::Big, Naturals::Small};
+use crate::naturals::Naturals;
+use crate::naturals::Naturals::{Big, Small};
 use std::str::FromStr;
 
 macro_rules! impl_from_small_primitive {
@@ -123,14 +124,38 @@ impl_from_primitive! {}
 impl_from_unsigned_primitive! { isize i8 i16 i32 i64 i128 }
 
 impl FromIterator<usize> for Naturals {
-    fn from_iter<T: IntoIterator<Item = usize>>(_iter: T) -> Self {
-        todo!()
+    fn from_iter<T: IntoIterator<Item=usize>>(iter: T) -> Self {
+        Big(iter.into_iter().collect()).trim()
     }
 }
 
 impl FromStr for Naturals {
     type Err = ();
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        todo!()
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut s = s;
+        let mut r;
+        let mut n = Naturals::try_from(1)?;
+        let mut exp = 0;
+        while s.len() != 0 {
+            let delta = s.len().checked_sub(39usize);
+            match delta {
+                None => (s, r) = ("", s),
+                Some(delta) => (s, r) = s.split_at_checked(delta).ok_or(())?,
+            }
+            let mut r = Naturals::new(r.parse::<u128>().map_err(|_| ())?);
+            r = r.pow(39usize.pow(exp));
+            n *= &Naturals::new(r);
+        }
+        Ok(n)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn from_str() {
+        use crate::naturals::Naturals;
+        assert_eq!("100".parse::<Naturals>().unwrap(), Naturals::try_from(100).unwrap());
+        assert_eq!("100000000000000000000".parse::<Naturals>().unwrap(), Naturals::try_from(100000000000000000000i128).unwrap());
     }
 }
