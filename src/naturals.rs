@@ -1,10 +1,10 @@
-use Naturals::{Big, Small};
+use Natural::{Big, Small};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::iter::{Product, Sum};
 
 #[derive(Debug, Clone)]
-pub enum Naturals {
+pub enum Natural {
     Small(usize),
     Big(Vec<usize>),
     // TODO add lazy Naturals when converting FromIterator
@@ -14,8 +14,8 @@ pub enum Naturals {
 // TODO
 pub enum NonZeroNaturals {}
 
-impl Naturals {
-    pub fn new(n: impl Into<Naturals>) -> Self {
+impl Natural {
+    pub fn new(n: impl Into<Natural>) -> Self {
         n.into()
     }
     pub fn is_small(&self) -> bool {
@@ -47,7 +47,7 @@ impl Naturals {
     }
 }
 
-impl PartialEq<Self> for Naturals {
+impl PartialEq<Self> for Natural {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Small(lhs), Small(rhs)) => lhs.eq(rhs),
@@ -59,9 +59,9 @@ impl PartialEq<Self> for Naturals {
     }
 }
 
-impl Eq for Naturals {}
+impl Eq for Natural {}
 
-impl Ord for Naturals {
+impl Ord for Natural {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Small(lhs), Small(rhs)) => lhs.cmp(rhs),
@@ -92,7 +92,7 @@ impl Ord for Naturals {
     }
 }
 
-impl PartialOrd<Self> for Naturals {
+impl PartialOrd<Self> for Natural {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -110,25 +110,25 @@ impl PartialOrd<Self> for Naturals {
     }
 }
 
-impl Sum<Self> for Naturals {
+impl Sum<Self> for Natural {
     fn sum<I: Iterator<Item = Self>>(_iter: I) -> Self {
         todo!()
     }
 }
 
-impl Product<Self> for Naturals {
+impl Product<Self> for Natural {
     fn product<I: Iterator<Item = Self>>(_iter: I) -> Self {
         todo!()
     }
 }
 
-impl Default for Naturals {
+impl Default for Natural {
     fn default() -> Self {
         Small(0usize)
     }
 }
 
-impl Hash for Naturals {
+impl Hash for Natural {
     fn hash<H: Hasher>(&self, _state: &mut H) {
         todo!()
     }

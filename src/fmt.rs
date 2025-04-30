@@ -1,8 +1,8 @@
-use crate::naturals::Naturals;
+use crate::naturals::Natural;
 use std::fmt::{
     Binary, Display, Formatter, LowerExp, LowerHex, Octal, Pointer, UpperExp, UpperHex,
 };
-impl Binary for Naturals {
+impl Binary for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
@@ -12,37 +12,37 @@ impl Binary for Naturals {
 //         todo!()
 //     }
 // }
-impl Display for Naturals {
+impl Display for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl LowerExp for Naturals {
+impl LowerExp for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl LowerHex for Naturals {
+impl LowerHex for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl Octal for Naturals {
+impl Octal for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl Pointer for Naturals {
+impl Pointer for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl UpperExp for Naturals {
+impl UpperExp for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 }
-impl UpperHex for Naturals {
+impl UpperHex for Natural {
     fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
         todo!()
     }

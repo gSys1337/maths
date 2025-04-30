@@ -31,17 +31,17 @@ fn integer_from_i128() {
 
 #[test]
 fn naturals_from_primitive() {
-    use crate::naturals::Naturals;
-    if let Naturals::Small(small) = Naturals::new(8u8) {
+    use crate::naturals::Natural;
+    if let Natural::Small(small) = Natural::new(8u8) {
         assert_eq!(8usize, small);
     } else {
         panic!("Type u8 is small enough to stay on Stack.");
     }
     assert!(
-        Naturals::new((u8::MAX as u16) << 3).is_small(),
+        Natural::new((u8::MAX as u16) << 3).is_small(),
         "Type u16 is small enough to stay on Stack."
     );
-    if let Naturals::Small(small) = Naturals::new(2147483647u32) {
+    if let Natural::Small(small) = Natural::new(2147483647u32) {
         assert_eq!(2147483647usize, small);
     } else {
         panic!("Type u32 is small enough to stay on Stack.");
@@ -49,20 +49,20 @@ fn naturals_from_primitive() {
 }
 #[test]
 fn naturals_from_u128() {
-    use crate::naturals::Naturals;
-    if let Naturals::Small(small) = Naturals::new(2147483647u128) {
+    use crate::naturals::Natural;
+    if let Natural::Small(small) = Natural::new(2147483647u128) {
         assert_eq!(2147483647usize, small);
     } else {
         panic!(
             "Given value of type u128 is still small enough to fit into usize and can therefore stay on Stack."
         );
     }
-    if let Naturals::Big(parts) = Naturals::new(u128::MAX) {
+    if let Natural::Big(parts) = Natural::new(u128::MAX) {
         assert_eq!(parts, vec![usize::MAX, usize::MAX]);
     } else {
         panic!("This value is not small enough to fit on the stack. Is is split into 2 parts.");
     }
-    if let Naturals::Big(parts) = Naturals::new((usize::MAX as u128) << 32) {
+    if let Natural::Big(parts) = Natural::new((usize::MAX as u128) << 32) {
         assert_eq!(parts, vec![0xFFFFFFFF00000000usize, 0xFFFFFFFFusize]);
     } else {
         panic!("This value is not small enough to fit on the stack. Is is split into 2 parts.");
@@ -73,7 +73,7 @@ fn naturals_from_u128() {
 
 #[test]
 fn trim() {
-    use crate::naturals::Naturals::{Big, Small};
+    use crate::naturals::Natural::{Big, Small};
     assert_eq!(vec![2usize, 0usize], vec![2usize, 0usize]);
     assert_eq!(Small(2usize), Big(vec![2usize, 0usize]).trim());
     assert_eq!(
