@@ -1,63 +1,79 @@
-use std::iter;
 use crate::naturals::Natural;
 use crate::naturals::Natural::{Big, Small};
-use std::ops::{Add, Div, Mul, Rem, Shl, Sub};
 use crate::naturals::iter::BitIter;
+use std::cmp::Ordering;
+use std::iter;
+use std::iter::repeat_n;
+use std::ops::{Add, Div, Mul, Rem, Shl, Sub};
 
 impl Add<Natural> for Natural {
     type Output = Natural;
-
     fn add(self, rhs: Natural) -> Natural {
-        match (self, rhs) {
-            (Small(lhs), Small(rhs)) => {
-                let (sum, overflow) = lhs.overflowing_add(rhs);
-                if overflow {
-                    Big(vec![sum, 1usize])
-                } else {
-                    Small(sum)
-                }
-            }
-            (Big(lhs), Small(rhs)) => {
-                let mut carry = rhs;
-                let mut new: Vec<usize> = lhs
-                    .iter()
-                    .map(|part| {
-                        let (sum, c) = part.overflowing_add(carry);
-                        carry = if c { 1 } else { 0 };
-                        sum
-                    })
-                    .collect();
-                if carry > 0 {
-                    new.push(carry);
-                }
-                Big(new)
-            }
-            (Small(lhs), rhs) => rhs.add(Small(lhs)),
-            (Big(lhs), Big(rhs)) => {
-                let mut carry = 0usize;
-                let mut new: Vec<usize> = lhs
-                    .iter()
-                    // TODO test is result is correct if length of both hunks is different
-                    .zip(rhs)
-                    .map(|(lhs, rhs)| {
-                        let (sum, overflow) = lhs.overflowing_add(rhs);
-                        let sum = sum + carry;
-                        carry = if overflow { 1 } else { 0 };
-                        sum
-                    })
-                    .collect();
-                if carry > 0 {
-                    new.push(carry);
-                }
-                Big(new)
-            }
+        let mut lhs = match self {
+            Small(hunk) => vec![hunk],
+            Big(hunks) => hunks,
+        };
+        let mut rhs = match rhs {
+            Small(hunk) => vec![hunk],
+            Big(hunks) => hunks,
+        };
+        match lhs.len().cmp(&rhs.len()) {
+            Ordering::Less => lhs.extend(repeat_n(0, rhs.len() - lhs.len())),
+            Ordering::Greater => rhs.extend(repeat_n(0, lhs.len() - rhs.len())),
+            Ordering::Equal => {}
         }
+        let mut carry = 0usize;
+        let mut new: Vec<usize> = lhs
+            .iter()
+            .zip(rhs)
+            .map(|(lhs, rhs)| {
+                let (sum, overflow) = lhs.overflowing_add(rhs);
+                let sum = sum + carry;
+                carry = if overflow { 1 } else { 0 };
+                sum
+            })
+            .collect();
+        if carry > 0 {
+            new.push(carry);
+        }
+        Big(new).trim()
+    }
+}
+#[cfg(test)]
+mod add_test {
+    use crate::naturals::Natural::{Big, Small};
+    #[test]
+    fn big_lhs_rhs_0() {
+        let lhs = Big(vec![1, 1, 1]);
+        let rhs = Big(vec![1, 1]);
+        let expected = Big(vec![2, 2, 1]);
+        assert_eq!(expected, lhs + rhs);
+    }
+    #[test]
+    fn big_lhs_rhs_1() {
+        let lhs = Big(vec![1, 1]);
+        let rhs = Big(vec![1, 1, 2]);
+        let expected = Big(vec![2, 2, 2]);
+        assert_eq!(expected, lhs + rhs);
+    }
+    #[test]
+    fn big_lhs_rhs_2() {
+        let lhs = Big(vec![1, usize::MAX, 1, 1]);
+        let rhs = Big(vec![1, 1]);
+        let expected = Big(vec![2, 0, 2, 1]);
+        assert_eq!(expected, lhs + rhs);
+    }
+    #[test]
+    fn big_lhs_rhs_3() {
+        let lhs = Small(0);
+        let rhs = Small(0);
+        let expected = Small(0);
+        assert_eq!(expected, lhs + rhs);
     }
 }
 
 impl Sub<Natural> for Natural {
     type Output = Option<Natural>;
-
     fn sub(self, rhs: Natural) -> Self::Output {
         match (self, rhs) {
             (Small(lhs), Small(rhs)) => Some(Small(lhs.checked_sub(rhs)?)),
@@ -67,12 +83,16 @@ impl Sub<Natural> for Natural {
                     None
                 } else {
                     let mut carry = 0usize;
-                    let new: Vec<usize> = lhs.iter().zip(rhs.iter().chain(iter::repeat(&0usize))).map(|(lhs, rhs)| {
-                        let (diff, overflow0) = lhs.overflowing_sub(*rhs);
-                        let (diff, overflow1) = diff.overflowing_sub(carry);
-                        carry = if overflow0 | overflow1 { 1 } else { 0 };
-                        diff
-                    }).collect();
+                    let new: Vec<usize> = lhs
+                        .iter()
+                        .zip(rhs.iter().chain(iter::repeat(&0usize)))
+                        .map(|(lhs, rhs)| {
+                            let (diff, overflow0) = lhs.overflowing_sub(*rhs);
+                            let (diff, overflow1) = diff.overflowing_sub(carry);
+                            carry = if overflow0 | overflow1 { 1 } else { 0 };
+                            diff
+                        })
+                        .collect();
                     if carry == 0 { Some(Big(new)) } else { None }
                 }
             }
@@ -84,7 +104,6 @@ impl Sub<Natural> for Natural {
 #[cfg(target_pointer_width = "64")]
 impl Mul<Natural> for Natural {
     type Output = Natural;
-
     fn mul(self, rhs: Natural) -> Self::Output {
         let lhs = match self {
             Small(lhs) => vec![lhs],
@@ -98,10 +117,19 @@ impl Mul<Natural> for Natural {
         for (idx_l, item_l) in lhs.iter().enumerate() {
             for (idx_r, item_r) in rhs.iter().enumerate() {
                 let n = Natural::new((*item_l as u128).mul(*item_r as u128));
+                #[allow(clippy::suspicious_arithmetic_impl)]
                 prod_sum.push(n.shift_up(idx_l + idx_r));
             }
         }
-        prod_sum.iter().fold(Natural::new(0usize), |acc, next| { acc + next.to_owned() })
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        prod_sum
+            .iter_mut()
+            .reduce(|acc, next| {
+                *acc = acc.clone() + next.to_owned();
+                acc
+            })
+            .unwrap()
+            .clone()
     }
 }
 
@@ -129,11 +157,7 @@ impl Natural {
     pub fn pow(self, exp: Natural) -> Natural {
         BitIter::from(exp).fold(Natural::ONE, |acc, bit| {
             let acc = acc.clone() * acc;
-            if bit {
-                acc * self.clone()
-            } else {
-                acc
-            }
+            if bit { acc * self.clone() } else { acc }
         })
     }
 }
@@ -142,10 +166,12 @@ impl Natural {
 mod pow_tests {
     use crate::naturals::Natural;
     use crate::naturals::Natural::Small;
-
     #[test]
     fn pow_0() {
-        assert_eq!(Natural::TWO.pow(Small(100)), "1267650600228229401496703205376".parse().unwrap());
+        assert_eq!(
+            Natural::TWO.pow(Small(100)),
+            "1267650600228229401496703205376".parse().unwrap()
+        );
     }
     #[test]
     fn pow_1() {
@@ -155,15 +181,21 @@ mod pow_tests {
 
 impl Div<Natural> for Natural {
     type Output = Natural;
-
-    fn div(self, _rhs: Self) -> Self::Output {
-        todo!()
+    // TODO implement proper long division
+    fn div(self, rhs: Self) -> Self::Output {
+        assert_ne!(rhs, Natural::ZERO, "division by zero");
+        let mut remainder = self;
+        let mut quotient = Natural::ZERO;
+        while remainder >= rhs {
+            remainder = (remainder - rhs.clone()).expect("It was tested remainder > rhs");
+            quotient = quotient + Natural::ONE;
+        }
+        quotient
     }
 }
 
 impl Rem<Natural> for Natural {
     type Output = Natural;
-
     fn rem(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Small(lhs), Small(rhs)) => Small(lhs.rem(rhs)),
@@ -176,67 +208,82 @@ impl Rem<Natural> for Natural {
 
 impl Shl<Natural> for Natural {
     type Output = Natural;
-
     fn shl(mut self, rhs: Natural) -> Self::Output {
-        let hunk_size = Natural::new(usize::BITS);
-        // if rhs >= hunk_size {
-        // TODO change to upper line once Natural::ge(...) is implemented
-        if rhs.cmp(&hunk_size).is_ge() {
+        let secure_shift = Natural::new((isize::MAX >> size_of::<usize>().ilog2()).unsigned_abs())
+            * Natural::new(usize::BITS);
+        assert!(
+            rhs < secure_shift,
+            "Shifting {secure_shift:?} or more times is impossible as it creates more then isize::MAX bytes"
+        );
+        let hunk_size = Small(usize::BITS as usize);
+        if rhs >= hunk_size {
             let new_hunks = rhs.clone() / hunk_size.clone();
-            if new_hunks.clone() + Natural::from(self.clone().len()) >= Natural::from(usize::MAX) {
-                panic!("Unable to shift for {rhs} bits as it would blow up size of inner vec");
-            }
-            self = self.shift_up(new_hunks.try_into().unwrap());
+            assert!(new_hunks.is_small());
+            assert!(
+                new_hunks.first_hunk() + self.len() < Natural::max_hunks(),
+                "Shifting {:?} times would create more then isize::MAX bytes",
+                rhs.clone()
+            );
+            self = self.shift_up(new_hunks.first_hunk());
         }
-        let rhs: usize = (rhs % hunk_size).try_into().unwrap();
-        match self {
-            Small(hunk) => Big(vec![hunk << rhs, hunk >> (usize::BITS - (rhs as u32))]).trim(),
-            Big(hunks) => {
-                let mut upper: Vec<usize> = hunks.iter().map(|x| x << rhs).collect();
-                upper.push(0);
-                let mut lower: Vec<usize> = vec![0];
-                lower.extend(hunks.iter().map(|x| x >> (usize::BITS - (rhs as u32))));
-                Big(upper.iter().zip(lower).map(|(upper, lower)| upper+lower).collect()).trim()
+        let rhs: usize = (rhs % hunk_size).first_hunk();
+        if rhs == 0 {
+            self
+        } else {
+            match self {
+                Small(hunk) => Big(vec![hunk << rhs, hunk >> (usize::BITS as usize - rhs)]).trim(),
+                Big(hunks) => {
+                    let mut upper: Vec<usize> = hunks.iter().map(|x| x << rhs).collect();
+                    upper.push(0);
+                    let mut lower: Vec<usize> = vec![0];
+                    lower.extend(hunks.iter().map(|x| x >> (usize::BITS - (rhs as u32))));
+                    Big(upper
+                        .iter()
+                        .zip(lower)
+                        .map(|(upper, lower)| upper + lower)
+                        .collect())
+                    .trim()
+                }
             }
         }
     }
 }
-
 #[cfg(test)]
 #[cfg(target_pointer_width = "64")]
 mod shl_tests {
     use crate::naturals::Natural;
+    use crate::naturals::Natural::Small;
 
     #[test]
     fn shl_inside_small() {
         let expected = Natural::Small(0);
-        let output = expected.clone() << Natural::Small(1);
+        let output = expected.clone() << Small(1);
         assert_eq!(expected, output);
 
         let expected = Natural::Small(8);
-        let output = Natural::Small(1) << Natural::Small(3);
+        let output = Natural::Small(1) << Small(3);
         assert_eq!(expected, output);
 
         let expected = Natural::Small(0b1010001010000000);
-        let output = Natural::Small(0b101000101) << Natural::Small(7);
+        let output = Natural::Small(0b101000101) << Small(7);
         assert_eq!(expected, output);
     }
     #[test]
     fn shl_small_into_big() {
-        let expected = Natural::Big(vec![0,1]);
-        let output = Natural::Small(1) << Natural::Small(64);
+        let expected = Natural::Big(vec![0, 1]);
+        let output = Natural::Small(1) << Small(64);
         assert_eq!(expected, output);
 
-        let expected = Natural::Big(vec![0,8]);
-        let output = Natural::Small(1) << Natural::Small(64+3);
+        let expected = Natural::Big(vec![0, 8]);
+        let output = Natural::Small(1) << Small(64 + 3);
         assert_eq!(expected, output);
 
-        let expected = Natural::Big(vec![0,0b101000101]);
-        let output = Natural::Small(0b101000101) << Natural::Small(64);
+        let expected = Natural::Big(vec![0, 0b101000101]);
+        let output = Natural::Small(0b101000101) << Small(64);
         assert_eq!(expected, output);
 
-        let expected = Natural::Big(vec![0,0b1010001010000000]);
-        let output = Natural::Small(0b101000101) << Natural::Small(64+7);
+        let expected = Natural::Big(vec![0, 0b1010001010000000]);
+        let output = Natural::Small(0b101000101) << Small(64 + 7);
         assert_eq!(expected, output);
     }
 }

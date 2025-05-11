@@ -1,20 +1,13 @@
 pub mod iter;
+use crate::naturals::iter::BitIter;
 use Natural::{Big, Small};
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
-use std::iter::{Product, Sum};
 
 #[derive(Debug, Clone)]
 pub enum Natural {
     Small(usize),
     Big(Vec<usize>),
-    // TODO add lazy Naturals when converting FromIterator
-    // Lazy(Vec<usize>, Box<dyn Iterator<Item=usize>>),
 }
-
-// TODO
-pub enum NonZeroNaturals {}
-
 impl Natural {
     pub fn new(n: impl Into<Natural>) -> Self {
         n.into()
@@ -44,10 +37,16 @@ impl Natural {
             self
         }
     }
-    pub(crate) fn last(&self) -> usize {
+    pub fn last_hunk(&self) -> usize {
         match self {
             Small(inner) => *inner,
             Big(hunks) => *hunks.last().expect("Natural::Big(_) is never empty"),
+        }
+    }
+    pub fn first_hunk(&self) -> usize {
+        match self {
+            Small(hunk) => *hunk,
+            Big(hunks) => *hunks.first().expect("Big(_) is never empty"),
         }
     }
     #[allow(clippy::len_without_is_empty)]
@@ -57,10 +56,17 @@ impl Natural {
             Big(hunks) => hunks.len(),
         }
     }
-    pub fn bits(&self) -> Natural {
+    pub const fn max_hunks() -> usize {
+        (isize::MAX >> size_of::<usize>().ilog2()).unsigned_abs()
+    }
+    #[allow(non_snake_case)]
+    pub fn BITS(&self) -> Natural {
         (Small(usize::BITS as usize) * Small(self.len())
-            - Natural::new(self.last().leading_zeros()))
+            - Natural::new(self.last_hunk().leading_zeros()))
         .expect("This equation always equals 0 or higher")
+    }
+    pub fn bits(&self) -> BitIter {
+        BitIter::from(self.clone())
     }
 }
 /// Constants
@@ -96,66 +102,60 @@ impl Ord for Natural {
             (Big(_), Small(_)) => Ordering::Greater,
         }
     }
-    fn max(self, _other: Self) -> Self
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
-    fn min(self, _other: Self) -> Self
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
-    fn clamp(self, _min: Self, _max: Self) -> Self
-    where
-        Self: Sized,
-    {
-        todo!()
-    }
+    // fn max(self, _other: Self) -> Self
+    // where
+    //     Self: Sized,
+    // {
+    //     todo!()
+    // }
+    // fn min(self, _other: Self) -> Self
+    // where
+    //     Self: Sized,
+    // {
+    //     todo!()
+    // }
+    // fn clamp(self, _min: Self, _max: Self) -> Self
+    // where
+    //     Self: Sized,
+    // {
+    //     todo!()
+    // }
 }
 
 impl PartialOrd<Self> for Natural {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
-    fn lt(&self, _other: &Self) -> bool {
-        todo!()
-    }
-    fn le(&self, _other: &Self) -> bool {
-        todo!()
-    }
-    fn gt(&self, _other: &Self) -> bool {
-        todo!()
-    }
-    fn ge(&self, _other: &Self) -> bool {
-        todo!()
-    }
+    // fn lt(&self, _other: &Self) -> bool {
+    //     todo!()
+    // }
+    // fn le(&self, _other: &Self) -> bool {
+    //     todo!()
+    // }
+    // fn gt(&self, _other: &Self) -> bool {
+    //     todo!()
+    // }
+    // fn ge(&self, _other: &Self) -> bool {
+    //     todo!()
+    // }
 }
 
-impl Sum<Self> for Natural {
-    fn sum<I: Iterator<Item = Self>>(_iter: I) -> Self {
-        todo!()
-    }
-}
+// impl Sum<Self> for Natural {
+//     fn sum<I: Iterator<Item = Self>>(_iter: I) -> Self {
+//         todo!()
+//     }
+// }
 
-impl Product<Self> for Natural {
-    fn product<I: Iterator<Item = Self>>(_iter: I) -> Self {
-        todo!()
-    }
-}
+// impl Product<Self> for Natural {
+//     fn product<I: Iterator<Item = Self>>(_iter: I) -> Self {
+//         todo!()
+//     }
+// }
 
-impl Default for Natural {
-    fn default() -> Self {
-        Small(0usize)
-    }
-}
-
-impl Hash for Natural {
-    fn hash<H: Hasher>(&self, _state: &mut H) {
-        todo!()
-    }
-}
+// impl Hash for Natural {
+//     fn hash<H: Hasher>(&self, _state: &mut H) {
+//         todo!()
+//     }
+// }
 
 // TODO add Traits from ops module

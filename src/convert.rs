@@ -1,5 +1,6 @@
 use crate::naturals::Natural;
 use crate::naturals::Natural::{Big, Small};
+use crate::naturals::iter::BitIter;
 use std::str::FromStr;
 
 macro_rules! impl_from_small_primitive {
@@ -124,7 +125,7 @@ impl_from_primitive! {}
 impl_from_unsigned_primitive! { isize i8 i16 i32 i64 i128 }
 
 impl FromIterator<usize> for Natural {
-    fn from_iter<T: IntoIterator<Item=usize>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
         Big(iter.into_iter().collect()).trim()
     }
 }
@@ -149,30 +150,55 @@ impl FromStr for Natural {
         Ok(n)
     }
 }
-
-impl TryInto<usize> for Natural {
-    type Error = ();
-
-    fn try_into(self) -> Result<usize, Self::Error> {
-        match self {
-            Small(inner) => Ok(inner),
-            Big(_) => Err(()),
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
+mod from_str_test {
     use std::str::FromStr;
-
     #[test]
     fn from_str_test() {
         use crate::naturals::Natural;
         assert_eq!(Natural::from_str("100"), Natural::try_from(100));
-        assert_eq!(Natural::from_str("100000000000000000000"), Ok(Natural::from(100000000000000000000u128)));
-        assert_eq!(Natural::from_str("1000000000000000000900"), Ok(Natural::from(1000000000000000000900u128)));
-        assert_eq!(Natural::from_str("9345623510000000000234500000000900"), Natural::try_from(9345623510000000000234500000000900i128));
-        assert_eq!(Natural::from_str(&u128::MAX.to_string()), Ok(Natural::Big(vec![usize::MAX, usize::MAX])));
-        assert_eq!(Natural::from_str("340282366920938463463374607431768211456"), Ok(Natural::Big(vec![0, 0, 1])));
+        assert_eq!(
+            Natural::from_str("100000000000000000000"),
+            Ok(Natural::from(100000000000000000000u128))
+        );
+        assert_eq!(
+            Natural::from_str("1000000000000000000900"),
+            Ok(Natural::from(1000000000000000000900u128))
+        );
+        assert_eq!(
+            Natural::from_str("9345623510000000000234500000000900"),
+            Natural::try_from(9345623510000000000234500000000900i128)
+        );
+        assert_eq!(
+            Natural::from_str(&u128::MAX.to_string()),
+            Ok(Natural::Big(vec![usize::MAX, usize::MAX]))
+        );
+        assert_eq!(
+            Natural::from_str("340282366920938463463374607431768211456"),
+            Ok(Natural::Big(vec![0, 0, 1]))
+        );
+    }
+}
+
+impl From<Natural> for Vec<usize> {
+    fn from(value: Natural) -> Self {
+        match value {
+            Small(hunk) => vec![hunk],
+            Big(hunks) => hunks,
+        }
+    }
+}
+
+impl TryFrom<Natural> for Vec<bool> {
+    type Error = ();
+    fn try_from(value: Natural) -> Result<Self, Self::Error> {
+        let size = value.len() * size_of::<bool>();
+        if size > isize::MAX.unsigned_abs() {
+            Err(())
+        } else {
+            let mut result: Vec<bool> = BitIter::from(value).collect();
+            result.reverse();
+            Ok(result)
+        }
     }
 }
