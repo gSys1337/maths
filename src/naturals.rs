@@ -1,3 +1,4 @@
+pub mod iter;
 use Natural::{Big, Small};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -24,7 +25,6 @@ impl Natural {
     pub fn is_big(&self) -> bool {
         matches!(self, Big(_))
     }
-    #[allow(unused)]
     pub(crate) fn trim(self) -> Self {
         if let Big(mut inner) = self {
             while inner.pop_if(|x| 0usize.eq(x)).is_some() {}
@@ -38,13 +38,37 @@ impl Natural {
                     // This is just to make trim(...) faster.
                     unsafe { Small(*inner.get_unchecked(0)) }
                 }
-                // Should they?
-                Ordering::Less => panic!("Calculations should always provide non zero Big(...)"),
+                Ordering::Less => Small(0),
             }
         } else {
             self
         }
     }
+    pub(crate) fn last(&self) -> usize {
+        match self {
+            Small(inner) => *inner,
+            Big(hunks) => *hunks.last().expect("Natural::Big(_) is never empty"),
+        }
+    }
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        match self {
+            Small(_) => 1,
+            Big(hunks) => hunks.len(),
+        }
+    }
+    pub fn bits(&self) -> Natural {
+        (Small(usize::BITS as usize) * Small(self.len())
+            - Natural::new(self.last().leading_zeros()))
+        .expect("This equation always equals 0 or higher")
+    }
+}
+/// Constants
+impl Natural {
+    pub const ZERO: Natural = Small(0);
+    pub const ONE: Natural = Small(1);
+    pub const TWO: Natural = Small(2);
+    pub const MAX_SMALL: Natural = Small(usize::MAX);
 }
 
 impl PartialEq<Self> for Natural {
@@ -68,8 +92,8 @@ impl Ord for Natural {
             (Big(_lhs), Big(_rhs)) => {
                 todo!()
             }
-            (Small(_lhs), Big(_rhs)) => Ordering::Less,
-            (Big(_lhs), Small(_rhs)) => Ordering::Greater,
+            (Small(_), Big(_)) => Ordering::Less,
+            (Big(_), Small(_)) => Ordering::Greater,
         }
     }
     fn max(self, _other: Self) -> Self

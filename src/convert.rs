@@ -132,33 +132,47 @@ impl FromIterator<usize> for Natural {
 impl FromStr for Natural {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut s = s;
-        let mut r;
-        let mut n = Small(0);
-        let mut exp = 0;
-        while !s.is_empty() {
-            let delta = s.len().checked_sub(39usize);
-            match delta {
-                None => (s, r) = ("", s),
-                Some(delta) => (s, r) = s.split_at_checked(delta).ok_or(())?,
-            }
-            let mut r = Natural::new(r.parse::<u128>().map_err(|_| ())?);
-            r = r * Natural::new(39usize.pow(exp));
-            exp += 1;
-            n = n + r.clone();
+        #[cfg(target_pointer_width = "16")]
+        let save_decimal_digits = 4usize;
+        #[cfg(target_pointer_width = "32")]
+        let save_decimal_digits = 9usize;
+        #[cfg(target_pointer_width = "64")]
+        let save_decimal_digits = 19usize;
+        let shift = s.len() % save_decimal_digits;
+        let (mut prefix, mut remainder) = s.split_at_checked(shift).ok_or(())?;
+        let mut n = Small(prefix.parse::<usize>().map_err(|_| ())?);
+        while !remainder.is_empty() {
+            (prefix, remainder) = remainder.split_at_checked(save_decimal_digits).ok_or(())?;
+            n = n * Small(10).pow(Small(save_decimal_digits));
+            n = n + Small(prefix.parse::<usize>().map_err(|_| ())?);
         }
         Ok(n)
     }
 }
 
+impl TryInto<usize> for Natural {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            Small(inner) => Ok(inner),
+            Big(_) => Err(()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     #[test]
-    fn from_str() {
+    fn from_str_test() {
         use crate::naturals::Natural;
-        assert_eq!("100".parse::<Natural>().unwrap(), Natural::try_from(100).unwrap());
-        assert_eq!("100000000000000000000".parse::<Natural>().unwrap(), Natural::try_from(100000000000000000000i128).unwrap());
-        assert_eq!("1000000000000000000900".parse::<Natural>().unwrap(), Natural::try_from(1000000000000000000900i128).unwrap());
-        assert_eq!("9345623510000000000234500000000900".parse::<Natural>().unwrap(), Natural::try_from(9345623510000000000234500000000900i128).unwrap());
+        assert_eq!(Natural::from_str("100"), Natural::try_from(100));
+        assert_eq!(Natural::from_str("100000000000000000000"), Ok(Natural::from(100000000000000000000u128)));
+        assert_eq!(Natural::from_str("1000000000000000000900"), Ok(Natural::from(1000000000000000000900u128)));
+        assert_eq!(Natural::from_str("9345623510000000000234500000000900"), Natural::try_from(9345623510000000000234500000000900i128));
+        assert_eq!(Natural::from_str(&u128::MAX.to_string()), Ok(Natural::Big(vec![usize::MAX, usize::MAX])));
+        assert_eq!(Natural::from_str("340282366920938463463374607431768211456"), Ok(Natural::Big(vec![0, 0, 1])));
     }
 }

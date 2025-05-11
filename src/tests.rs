@@ -15,7 +15,8 @@ fn integer_from_u64() {
 }
 
 // TODO does not work!
-// #[test]
+#[test]
+#[ignore]
 fn integer_from_i128() {
     use crate::Sign;
     use crate::integer::Integer;

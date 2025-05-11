@@ -46,7 +46,7 @@ macro_rules! from_signed_primitive {
                     if value == 0 { None }
                     else if value < 0 { Some(Sign::Negative) }
                     else { Some(Sign::Positive) };
-                let mut value = value.unsigned_abs();
+                let value = value.unsigned_abs();
                 if size_of::<$t>() <= size_of::<usize>() {
                     let mut value = value as usize;
                     if let Some(Sign::Negative) = sign {
